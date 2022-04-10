@@ -7,45 +7,6 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.cluster import KMeans
 import pandas as pd
 
-class KClustering:
-    def cluster(self, k):
-        df = pd.read_csv('TSP.csv', names=['x', 'y'])
-        data = df[['x', 'y']]
-
-        scaler = MinMaxScaler()
-        data_scale = scaler.fit_transform(data)
-        #k = 4
-
-        # 그룹 수, random_state 설정
-        model = KMeans(n_clusters=k, random_state=10)
-
-        # 정규화된 데이터에 학습
-        model.fit(data_scale)
-
-        # 클러스터링 결과 각 데이터가 몇 번째 그룹에 속하는지 저장
-        df["cluster"] = model.fit_predict(data_scale)
-
-        """
-        for i in range(k):
-            plt.scatter(df.loc[df['cluster'] == i, 'x'], df.loc[df['cluster'] == i, 'y'],
-                        label='cluster' + str(i), s=10)
-        plt.xlabel('X', size=12)
-        plt.ylabel('Y', size=12)
-        plt.show()
-        """
-
-        cities_of_cluster = []
-        idxs_list = []
-        for i in range(0, k):
-            tmp = [cities for cities in df[df['cluster'] == i].index]
-            idxs_list.append(tmp)
-            tmp_list = []
-            for k in tmp:
-                tmp_list.append(tourmanager.getCity(k))
-            cities_of_cluster.append(tmp_list)
-
-        return cities_of_cluster, idxs_list
-
 # TSP 도시 생성 클래스
 class City:
     # 생성자
@@ -82,7 +43,8 @@ class City:
 # 여행 매니저
 class TourManager:
     # 도착 도시 리스트
-    destinationCities = []
+    def __init__(self):
+        self.destinationCities = []
 
     # 도착할 도시(클래스) 추가
     def addCity(self, city):
@@ -96,6 +58,43 @@ class TourManager:
     def numberOfCities(self):
         return len(self.destinationCities)
 
+class KClustering:
+    def cluster(self, k, tourmanager):
+        df = pd.read_csv('TSP.csv', names=['x', 'y'])
+        data = df[['x', 'y']]
+
+        scaler = MinMaxScaler()
+        data_scale = scaler.fit_transform(data)
+        # k = 4
+
+        # 그룹 수, random_state 설정
+        model = KMeans(n_clusters=k, random_state=10)
+
+        # 정규화된 데이터에 학습
+        model.fit(data_scale)
+
+        # 클러스터링 결과 각 데이터가 몇 번째 그룹에 속하는지 저장
+        df["cluster"] = model.fit_predict(data_scale)
+
+        for i in range(k):
+            plt.scatter(df.loc[df['cluster'] == i, 'x'], df.loc[df['cluster'] == i, 'y'],
+                        label='cluster' + str(i), s=10)
+        plt.xlabel('X', size=12)
+        plt.ylabel('Y', size=12)
+        #plt.show()
+
+
+        cities_of_cluster = []
+        idxs_list = []
+        for i in range(0, k):
+            tmp = [cities for cities in df[df['cluster'] == i].index]
+            idxs_list.append(tmp)
+            tmp_list = []
+            for k in tmp:
+                tmp_list.append(tourmanager.getCity(k))
+            cities_of_cluster.append(tmp_list)
+
+        return cities_of_cluster, idxs_list
 
 # 여행 클래스(적합도 계산)
 class Tour:
@@ -211,6 +210,7 @@ class Population:
         for i in range(0, self.populationSize()):
             if fittest.getFitness() <= self.getTour(i).getFitness():
                 fittest = self.getTour(i)
+        #print(len(fittest))
         return fittest
 
     # 여행들 리스트 크기
@@ -246,6 +246,7 @@ class GA:
         return newPopulation
 
         # 크로스오버
+
     def crossover(self, parent1, parent2):
         child = Tour(self.tourmanager)
 
@@ -294,17 +295,12 @@ class GA:
 if __name__ == '__main__':
     f = open('TSP.csv', 'r')
     reader = csv.reader(f)
+    n_cities = 1000
 
-    all_cluster, idx_list = KClustering.cluster(4)
-
-    n_cities = 20
-    population_size = 50
-    n_generations = 100
+    n_generations = 10
     cityCoordinate = []
     city_x = []
     city_y = []
-
-    #random.seed(100)
 
     for line in reader:
         line0 = float(line[0])
@@ -317,52 +313,82 @@ if __name__ == '__main__':
             break
     f.close()
 
+    tourmanager = TourManager()
+    for i in range(n_cities):
+        tourmanager.addCity(City(x=city_x[i], y=city_y[i]))
+
+    clustering = KClustering()
+    k = 70
+    cluster_cities, idx_list = clustering.cluster(k, tourmanager)
+
+    population_size= []
+    for i in range(0, k):
+        population_size.append(len(cluster_cities[i]))
+    print(population_size)
+
+    # random.seed(100)
+
     # Load the map
-    #map_original = cv2.imread('map.jpg')
+    # map_original = cv2.imread('map.jpg')
 
     # Setup cities and tour
-    tourmanager = TourManager()
-
+    tourmanagerList = []
+    for i in range(0, k):
+        tourmanagerList.append(TourManager())
     # 도시 수 만큼 랜덤 좌표 설정
-    for i in range(n_cities):
-        #x = random.randint(200, 800)
-        #y = random.randint(200, 800)
+    #for i in range(n_cities):
+        # x = random.randint(200, 800)\
+        # y = random.randint(200, 800)
 
         # 도시를 여행 매니저 리스트에 추가
-        #tourmanager.addCity(City(x=x, y=y))
-        tourmanager.addCity(City(x=city_x[i], y=city_y[i]))
-        # 각 도시 위치에 점으로 표시
-        #cv2.circle(map_original, center=(x, y), radius=10, color=(0, 0, 255), thickness=-1, lineType=cv2.LINE_AA)
-        #plt.scatter(x, y)
-        plt.scatter(city_x[i], city_y[i])
-        plt.axis([0, 100, 0, 100])
+        # tourmanager.addCity(City(x=x, y=y))
+        # tourmanager.addCity(City(x=city_x[i], y=city_y[i]))
+    for i in range(0, k):
+        for city in cluster_cities[i]:
+            tourmanagerList[i].addCity(city)
+        #print(tourmanagerList[i].numberOfCities())
 
+
+        # 각 도시 위치에 점으로 표시
+        # cv2.circle(map_original, center=(x, y), radius=10, color=(0, 0, 255), thickness=-1, lineType=cv2.LINE_AA)
+        # plt.scatter(x, y)
+
+        # plt.scatter(city_x[i], city_y[i])
+        # plt.axis([0, 100, 0, 100])
 
     # map을 이름으로 사진 보여주기
-    #cv2.imshow('map', map_original)
-    #cv2.waitKey(0)
+    # cv2.imshow('map', map_original)
+    # cv2.waitKey(0)
 
     # Initialize population
-    pop = Population(tourmanager, populationSize=population_size, initialise=True)
-    print("Initial distance: " + str(pop.getFittest().getDistance()))
+    pop = []
+    for i in range(0, k):
+        pop.append(Population(tourmanagerList[i], populationSize=population_size[i], initialise=True))
+        print("Initial distance: " + str(pop[i].getFittest().getDistance()))
+        print(tourmanagerList[i].numberOfCities())
 
     # Evolve population
-    ga = GA(tourmanager)
+    ga = []
+    for i in range(0, k):
+        ga.append(GA(tourmanagerList[i]))
 
+    colors = ["blue", "red", "green", "yellow", "blue", "red", "green", "yellow", "black", "grey"]
     for i in range(n_generations):
+        for j in range(0, k):
         # population에 대해 유전알고리즘 시행 후 다시 저장
-        pop = ga.evolvePopulation(pop)
+            pop[j] = ga[j].evolvePopulation(pop[j])
 
-        # 가장 적합도가 높은 여행
-        fittest = pop.getFittest()
+            # 가장 적합도가 높은 여행
+            fittest = pop[j].getFittest()
 
-        if i == n_generations - 1:
-            for j in range(1, n_cities):
-                plt.plot([fittest[j].x, fittest[j - 1].x], [fittest[j].y, fittest[j - 1].y], color="blue")
-        print(pop.getFittest())
-        print("Final distance: " + str(pop.getFittest().getDistance()))
+            if i == n_generations - 1:
+                for m in range(1, population_size[j]):
+                    plt.plot([fittest[m].x, fittest[m - 1].x], [fittest[m].y, fittest[m - 1].y], linewidth="0.5")
+    for i in range(0, k):
+        print(pop[i].getFittest())
+        print("Final distance: " + str(pop[i].getFittest().getDistance()))
         # 지도에 반영
-        #map_result = map_original.copy()
+        # map_result = map_original.copy()
 
         """
         # 라인 그리기, 적합도가 가장 높은 투어에서 도시 순서대로 라인 그리기
@@ -385,12 +411,16 @@ if __name__ == '__main__':
             break
         """
 
-
     # Print final results
     print("Finished")
-    print("Final distance: " + str(pop.getFittest().getDistance()))
-    print("Solution:")
-    print(pop.getFittest())
+    sum = 0
+    for i in range(0, k):
+        print("Final distance%d: %s" % (i+1, str(pop[i].getFittest().getDistance())))
+        print("%d Solution:" % (i+1))
+        print(pop[i].getFittest())
+        print()
+        sum += pop[i].getFittest().getDistance()
+    print(sum)
     plt.show()
 
-    #cv2.waitKey(0)
+    # cv2.waitKey(0)
