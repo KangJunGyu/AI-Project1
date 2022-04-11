@@ -83,7 +83,6 @@ class KClustering:
         plt.ylabel('Y', size=12)
         #plt.show()
 
-
         cities_of_cluster = []
         idxs_list = []
         for i in range(0, k):
@@ -245,8 +244,6 @@ class GA:
 
         return newPopulation
 
-        # 크로스오버
-
     def crossover(self, parent1, parent2):
         child = Tour(self.tourmanager)
 
@@ -266,10 +263,9 @@ class GA:
                     if child.getCity(ii) == None:
                         child.setCity(ii, parent2.getCity(i))
                         break
-
         return child
 
-    # 변이(도시 위치 서로 바꾸기)
+    # 변이(도시 위치 서로 바꾸기 SWAP)
     def mutate(self, tour):
         for tourPos1 in range(1, tour.tourSize()):
             if random.random() < self.mutationRate:
@@ -289,7 +285,6 @@ class GA:
             tournament.saveTour(i, pop.getTour(randomId))
         fittest = tournament.getFittest()
         return fittest
-
 
 # 파일 직접 실행시 실행
 if __name__ == '__main__':

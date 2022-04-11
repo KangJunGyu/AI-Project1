@@ -3,48 +3,7 @@ import random
 import cv2
 import csv
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.cluster import KMeans
 import pandas as pd
-
-class KClustering:
-    def cluster(self, k):
-        df = pd.read_csv('TSP.csv', names=['x', 'y'])
-        data = df[['x', 'y']]
-
-        scaler = MinMaxScaler()
-        data_scale = scaler.fit_transform(data)
-        #k = 4
-
-        # 그룹 수, random_state 설정
-        model = KMeans(n_clusters=k, random_state=10)
-
-        # 정규화된 데이터에 학습
-        model.fit(data_scale)
-
-        # 클러스터링 결과 각 데이터가 몇 번째 그룹에 속하는지 저장
-        df["cluster"] = model.fit_predict(data_scale)
-
-        """
-        for i in range(k):
-            plt.scatter(df.loc[df['cluster'] == i, 'x'], df.loc[df['cluster'] == i, 'y'],
-                        label='cluster' + str(i), s=10)
-        plt.xlabel('X', size=12)
-        plt.ylabel('Y', size=12)
-        plt.show()
-        """
-
-        cities_of_cluster = []
-        idxs_list = []
-        for i in range(0, k):
-            tmp = [cities for cities in df[df['cluster'] == i].index]
-            idxs_list.append(tmp)
-            tmp_list = []
-            for k in tmp:
-                tmp_list.append(tourmanager.getCity(k))
-            cities_of_cluster.append(tmp_list)
-
-        return cities_of_cluster, idxs_list
 
 # TSP 도시 생성 클래스
 class City:
@@ -182,6 +141,8 @@ class Tour:
 class Population:
     def __init__(self, tourmanager, populationSize, initialise):
         self.tours = []
+        self.elit = []
+        self.isElit = 0
         for i in range(0, populationSize):
             self.tours.append(None)
 
@@ -205,6 +166,10 @@ class Population:
     def getTour(self, index):
         return self.tours[index]
 
+    def setElit(self):
+        self.elit = self.getFittest()
+        self.isElit = 1
+
     # 가장 적합도가 높은 투어 가져오기
     def getFittest(self):
         fittest = self.tours[0]
@@ -217,10 +182,16 @@ class Population:
     def populationSize(self):
         return len(self.tours)
 
+    def getFitnessList(self):
+        fitness_list = []
+        for i in range(0, self.populationSize()):
+            fitness_list.append(self.getTour(i).getFitness())
+        return fitness_list
+
 
 # 유전 알고리즘 클래스
 class GA:
-    def __init__(self, tourmanager, mutationRate=0.05, tournamentSize=5, elitism=True):
+    def __init__(self, tourmanager, mutationRate=0.1, tournamentSize=30, elitism=True):
         self.tourmanager = tourmanager
         self.mutationRate = mutationRate
         self.tournamentSize = tournamentSize
@@ -235,9 +206,9 @@ class GA:
             elitismOffset = 1
 
         for i in range(elitismOffset, newPopulation.populationSize()):
-            parent1 = self.tournamentSelection(pop)
-            parent2 = self.tournamentSelection(pop)
-            child = self.crossover(parent1, parent2)
+            parent1 = self.rankingSelecton(pop)
+            parent2 = self.rankingSelecton(pop)
+            child = self.PMXCrossover(parent1, parent2)
             newPopulation.saveTour(i, child)
 
         for i in range(elitismOffset, newPopulation.populationSize()):
@@ -245,8 +216,35 @@ class GA:
 
         return newPopulation
 
-        # 크로스오버
-    def crossover(self, parent1, parent2):
+    # 크로스오버 순서교차
+    def orderCrossover(self, parent1, parent2):
+        child = Tour(self.tourmanager)
+
+        startPos = int(random.randint(1, parent1.tourSize()-1))
+        endPos = int(random.randint(startPos + 1, parent2.tourSize()))
+
+        for i in range(0, child.tourSize()):
+            if i >= startPos and i <= endPos:
+                child.setCity(i, parent1.getCity(i))
+
+        for i in range(endPos+1, child.tourSize()):
+            for j in range(1, child.tourSize()):
+                if not child.containsCity(parent2.getCity(j)):
+                    child.setCity(i, parent2.getCity(j))
+                    break
+        for i in range(0, startPos):
+            for j in range(1, child.tourSize()):
+                if i == 0:
+                    child.setCity(0, parent2.getCity(0))
+                    break
+                if not child.containsCity(parent2.getCity(j)):
+                    child.setCity(i, parent2.getCity(j))
+                    break
+        #print(child)
+        #print(child.getCity(99))
+        return child
+
+    def frontOrderCrossover(self, parent1, parent2):
         child = Tour(self.tourmanager)
 
         startPos = int(random.random() * parent1.tourSize())
@@ -265,7 +263,38 @@ class GA:
                     if child.getCity(ii) == None:
                         child.setCity(ii, parent2.getCity(i))
                         break
+        #print(child)
+        return child
 
+    def PMXCrossover(self, parent1, parent2):
+        child = Tour(self.tourmanager)
+
+        startPos = int(random.randint(1, parent1.tourSize() - 1))
+        endPos = int(random.randint(startPos + 1, parent2.tourSize()))
+
+        for i in range(0, child.tourSize()):
+            if i >= startPos and i <= endPos:
+                child.setCity(i, parent1.getCity(i))
+
+        for i in range(0, child.tourSize()):
+            if i < startPos or i > endPos:
+                child.setCity(i, parent2.getCity(i))
+
+        duplicate = True
+        while duplicate:
+            duplicate = False
+            for i in range(1, child.tourSize()):
+                if i >= startPos and i <= endPos:
+                    # if not child.containsCity(parent2.getCity(i)):
+                        for j in range(1, child.tourSize()):
+                            if j < startPos or j > endPos:
+                                if child.getCity(j) == child.getCity(i):
+                                    child.setCity(j, parent2.getCity(i))
+                                    if i == endPos:
+                                        duplicate = False
+                                    break
+
+        #print(child)
         return child
 
     # 변이(도시 위치 서로 바꾸기)
@@ -289,15 +318,41 @@ class GA:
         fittest = tournament.getFittest()
         return fittest
 
+    def rankingSelecton(self, pop):
+        highest_chrom_idx = self.getSortedFitnessIndex(pop)
+        prob_list = [0.5, 0.2, 0.15, 0.1, 0.05]
+        p = random.random()
+        sum = 0
+        for i in range(5):
+            sum += prob_list[i]
+            if sum >= p:
+                idx = i
+                break
+        return pop.getTour(highest_chrom_idx[idx])
+
+    def getSortedFitnessIndex(self, pop):
+        fitness_list = pop.getFitnessList()
+        sortedFitness = sorted(fitness_list)
+        highest_list = []
+        highest_tour_index = []
+        for i in range(0, 5):
+            highest_fitness = sortedFitness.pop()
+            highest_tour_index.append(fitness_list.index(highest_fitness))
+        return highest_tour_index
+
+    def elitSelection(self, pop):
+        if pop.isElit:
+            pop.saveTour(int(random.random() * pop.populationSize()), pop.elit)
+        pop.setElit()
+
+        return pop.getTour(int(random.random() * pop.populationSize()))
 
 # 파일 직접 실행시 실행
 if __name__ == '__main__':
     f = open('TSP.csv', 'r')
     reader = csv.reader(f)
 
-    all_cluster, idx_list = KClustering.cluster(4)
-
-    n_cities = 20
+    n_cities = 100
     population_size = 50
     n_generations = 100
     cityCoordinate = []
