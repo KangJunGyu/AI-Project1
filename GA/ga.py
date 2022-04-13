@@ -101,6 +101,16 @@ class Tour:
     def getCity(self, tourPosition):
         return self.tour[tourPosition]
 
+    def getIndex(self, city):
+        return self.tour.index(city)
+
+    def getCount(self):
+        count = 0
+        for i in range(0, self.tourSize()):
+            if self.getCity(i) == None:
+                count += 1
+        return count
+
     # TSP에서 이용할 도시 리스트 추가
     def setCity(self, tourPosition, city):
         self.tour[tourPosition] = city
@@ -206,13 +216,13 @@ class GA:
             elitismOffset = 1
 
         for i in range(elitismOffset, newPopulation.populationSize()):
-            parent1 = self.rankingSelecton(pop)
-            parent2 = self.rankingSelecton(pop)
-            child = self.PMXCrossover(parent1, parent2)
+            parent1 = self.tournamentSelection(pop)
+            parent2 = self.tournamentSelection(pop)
+            child = self.orderCrossover(parent1, parent2)
             newPopulation.saveTour(i, child)
 
         for i in range(elitismOffset, newPopulation.populationSize()):
-            self.mutate(newPopulation.getTour(i))
+            self.swapMutate(newPopulation.getTour(i))
 
         return newPopulation
 
@@ -269,8 +279,8 @@ class GA:
     def PMXCrossover(self, parent1, parent2):
         child = Tour(self.tourmanager)
 
-        startPos = int(random.randint(1, parent1.tourSize() - 1))
-        endPos = int(random.randint(startPos + 1, parent2.tourSize()))
+        startPos = random.randint(1, parent1.tourSize() - 2)
+        endPos = random.randint(startPos + 1, parent2.tourSize() - 1)
 
         for i in range(0, child.tourSize()):
             if i >= startPos and i <= endPos:
@@ -283,22 +293,56 @@ class GA:
         duplicate = True
         while duplicate:
             duplicate = False
+            target = child[startPos:endPos+1]
+            for i in range(0, startPos):
+                if child[i] in target:
+                    duplicate = True
+                    for j in range(startPos, endPos+1):
+                        if child.getCity(i) == child.getCity(j):
+                            child.setCity(i, parent2.getCity(j))
+                            break
+
+            #target = child[:endPos+1]
+            for i in range(endPos+1, parent2.tourSize()):
+                if child[i] in target:
+                    duplicate = True
+                    for j in range(startPos, endPos+1):
+                        if child.getCity(i) == child.getCity(j):
+                            child.setCity(i, parent2.getCity(j))
+                            break
+            """
             for i in range(1, child.tourSize()):
                 if i >= startPos and i <= endPos:
                     # if not child.containsCity(parent2.getCity(i)):
+                    if child.getCity(i) in child[startPos:endPos]:
+                        duplicate = True
                         for j in range(1, child.tourSize()):
                             if j < startPos or j > endPos:
                                 if child.getCity(j) == child.getCity(i):
                                     child.setCity(j, parent2.getCity(i))
-                                    if i == endPos:
-                                        duplicate = False
-                                    break
+            """
 
-        #print(child)
+        #print(child.tourSize())
+        return child
+
+    def cycleCrossover(self, parent1, parent2):
+        child = Tour(self.tourmanager)
+        ind = 0
+        first, second = parent1, parent2
+
+        while True:
+            if child.getCount() == 0:
+                break
+            child[ind] = first[ind]
+            ind = first.getIndex(second[ind])
+            #print(ind)
+            if child[ind] != None and child.getCount() != 0:
+                first, second = second, first
+                ind = child.getIndex(None)
         return child
 
     # 변이(도시 위치 서로 바꾸기)
-    def mutate(self, tour):
+    def swapMutate(self, tour):
         for tourPos1 in range(1, tour.tourSize()):
             if random.random() < self.mutationRate:
                 tourPos2 = int(tour.tourSize() * random.uniform(0.05, 1))
@@ -309,14 +353,51 @@ class GA:
                 tour.setCity(tourPos2, city1)
                 tour.setCity(tourPos1, city2)
 
+    def inversionMutate(self, tour):
+        startPos = random.randint(1, tour.tourSize() - 2)
+        endPos = random.randint(startPos + 1, tour.tourSize() - 1)
+
+        child = Tour(self.tourmanager)
+        tmp = 0
+        for i in range(startPos, endPos+1):
+            for j in range(endPos - tmp, startPos-1, -1):
+                child.setCity(i, tour.getCity(j))
+                tmp += 1
+                break
+
+        for i in range(startPos, endPos+1):
+            tour.setCity(i, child.getCity(i))
+
     # 토너먼트 셀렉션
     def tournamentSelection(self, pop):
-        tournament = Population(self.tourmanager, self.tournamentSize, False)
-        for i in range(0, self.tournamentSize):
-            randomId = int(random.random() * pop.populationSize())
-            tournament.saveTour(i, pop.getTour(randomId))
-        fittest = tournament.getFittest()
-        return fittest
+        t = 0.6
+        n = 3
+        tournament = []
+        for i in range(0, 2**n):
+            tournament.append(random.randint(0, pop.populationSize()-1))
+
+        for i in reversed(range(1, n+1)):
+            for j in range(0, 2**(i-1)):
+                randomId = random.random()
+                if t > randomId:
+                    if pop.getTour(2*j).getFitness() > pop.getTour(2*j+1).getFitness():
+                        tournament[j] = tournament[2*j]
+                    else:
+                        tournament[j] = tournament[2*j+1]
+                else:
+                    if pop.getTour(2*j).getFitness() < pop.getTour(2*j+1).getFitness():
+                        tournament[j] = tournament[2*j]
+                    else:
+                        tournament[j] = tournament[2*j+1]
+        return pop.getTour(tournament[0])
+
+        # 좀 이상한 토너먼트(좋음)
+        # tournament = Population(self.tourmanager, self.tournamentSize, False)
+        # for i in range(0, self.tournamentSize):
+        #     randomId = int(random.random() * pop.populationSize())
+        #     tournament.saveTour(i, pop.getTour(randomId))
+        # fittest = tournament.getFittest()
+        # return fittest
 
     def rankingSelecton(self, pop):
         highest_chrom_idx = self.getSortedFitnessIndex(pop)
@@ -347,13 +428,38 @@ class GA:
 
         return pop.getTour(int(random.random() * pop.populationSize()))
 
+    def rouletteSelection(self, pop):
+        sum = 0
+        for i in range(pop.populationSize()):
+            sum += pop.getTour(i).getFitness()
+
+        fitnessProb = []
+        for i in range(pop.populationSize()):
+            fitnessProb.append(pop.getTour(i).getFitness() / sum)
+
+        fitnessSum = 0
+        fitness_sumList = []
+        for i in fitnessProb:
+            fitnessSum += i
+            fitness_sumList.append(fitnessSum)
+        #print(fitness_sumList)
+
+        rand = random.random()
+        #print(rand)
+        for i in range(pop.populationSize()):
+            if rand <= fitness_sumList[i]:
+                #print(pop.getTour(i))
+                return pop.getTour(i)
+
+        return None
+
 # 파일 직접 실행시 실행
 if __name__ == '__main__':
     f = open('TSP.csv', 'r')
     reader = csv.reader(f)
 
-    n_cities = 100
-    population_size = 50
+    n_cities = 1000
+    population_size = 10
     n_generations = 100
     cityCoordinate = []
     city_x = []
