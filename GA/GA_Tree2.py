@@ -5,6 +5,8 @@ from City import City
 from City import TourManager
 from City import Tour
 from City import Population
+from dfs import tour
+from dfs import cluster
 
 # 유전 알고리즘 클래스
 class GA:
@@ -24,8 +26,8 @@ class GA:
             elitismOffset = 1
 
         for i in range(elitismOffset, newPopulation.populationSize()):
-            parent1 = self.tournamentSelection(pop)
-            parent2 = self.tournamentSelection(pop)
+            parent1 = self.rouletteSelection(pop)
+            parent2 = self.rouletteSelection(pop)
             child = self.orderCrossover(parent1, parent2)
             newPopulation.saveTour(i, child)
 
@@ -289,13 +291,29 @@ if __name__ == '__main__':
             break
     f.close()
 
-    # Load the map
-    #map_original = cv2.imread('map.jpg')
+    cities = []
+    new_cities = []
+    sol = []
+    parentGene = []
 
-    # Setup cities and tour
-    tourmanager = TourManager()
+    i = 0
+    with open('../TSP.csv', mode='r', newline='') as tsp:
+        reader = csv.reader(tsp)
+        i = 0
+        for row in reader:
+            cities.append(City(float(row[0]), float(row[1]), i))
+            i = i + 1
+
+    number = int(input("생성할 부모 gene 수를 입력하시오 :  "))
+    cluster_number = int(input("생성할 군집의 수를 입력하시오 :  "))
+
+    for i in range(number):
+        tournode = tour(cities, cluster_number)
+        parentGene.append(tournode)
+    print(len(parentGene[0].getArray()))
 
     # 도시 수 만큼 랜덤 좌표 설정
+    tourmanager = TourManager()
     for i in range(n_cities):
         #x = random.randint(200, 800)
         #y = random.randint(200, 800)
@@ -314,8 +332,30 @@ if __name__ == '__main__':
     #cv2.imshow('map', map_original)
     #cv2.waitKey(0)
 
+    tourList = []
+    for i in range(0, number):
+        tourList.append(parentGene[i].getArray())
+    # print(parentGene[0].getArray())
+    # print(parentGene[1].getArray())
+    randomTour = []
+    for i in range(0, number):
+        randomTour.append(TourManager())
+
+    for i in range(0, number):
+        randomTour[i].setCity(tourList[i])
+
+    randomTourList = []
+    for i in range(0, number):
+        randomTourList.append(Tour(randomTour[i]))
+        randomTourList[i].generate()
+    #print(randomTourList[0])
+
     # Initialize population
-    pop = Population(tourmanager, populationSize=population_size, initialise=True)
+    pop = Population(tourmanager, populationSize=number, initialise=False)
+    for i in range(0, number):
+        pop.saveTour(i, randomTourList[i])
+        print(pop.getTour(i))
+
     print("Initial distance: " + str(pop.getFittest().getDistance()))
 
     # Evolve population

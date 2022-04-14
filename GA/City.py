@@ -49,6 +49,9 @@ class TourManager:
     def numberOfCities(self):
         return len(self.destinationCities)
 
+    def setCity(self, cities):
+        self.destinationCities = cities
+
 
 # 여행 클래스(적합도 계산)
 class Tour:
@@ -86,11 +89,15 @@ class Tour:
         geneString += 'End'
         return geneString
 
+    def generate(self):
+        for cityIndex in range(0, self.tourmanager.numberOfCities()):
+            self.setCity(cityIndex, self.tourmanager.getCity(cityIndex))
+
     # 이동할 도시 추가
     def generateIndividual(self):
         for cityIndex in range(0, self.tourmanager.numberOfCities()):
             self.setCity(cityIndex, self.tourmanager.getCity(cityIndex))
-        random.shuffle(self.tour)
+        #random.shuffle(self.tour)
         for cityIndex in range(0, self.tourmanager.numberOfCities()):
             if self.getCity(cityIndex) == self.tourmanager.getCity(0):
                 self.tour[0], self.tour[cityIndex] = self.tour[cityIndex], self.tour[0]

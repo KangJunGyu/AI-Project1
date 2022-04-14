@@ -316,7 +316,7 @@ if __name__ == '__main__':
     k = 70
     cluster_cities, idx_list = clustering.cluster(k, tourmanager)
 
-    population_size= []
+    population_size = []
     for i in range(0, k):
         population_size.append(len(cluster_cities[i]))
     print(population_size)
