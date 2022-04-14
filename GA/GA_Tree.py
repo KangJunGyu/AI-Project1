@@ -345,4 +345,12 @@ if __name__ == '__main__':
     print(pop.getFittest())
     for i in range(0, n_cities):
         print(pop.getFittest().getCity(i).getIndex(), end=' -> ')
+
+    with open('ga_tree.csv', mode='w', newline='') as sam:
+        writer = csv.writer(sam)
+        index_array = []
+        for row in range(n_cities):
+            index_array.append([pop.getFittest().getCity(row).getIndex()])
+            writer.writerow(index_array[row])
+
     plt.show()

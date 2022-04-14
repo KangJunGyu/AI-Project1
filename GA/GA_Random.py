@@ -1,5 +1,5 @@
 # 유전 알고리즘으로 TSP 문제 풀기
-# elitSelection, orderCrossover, inversionMutate
+# roulettewheelSelection, orderCrossover, swapMutate
 
 import random
 import csv
@@ -28,8 +28,8 @@ class GA:
             elitismOffset = 1
 
         for i in range(elitismOffset, newPopulation.populationSize()):
-            parent1 = self.elitSelection(pop)
-            parent2 = self.elitSelection(pop)
+            parent1 = self.rouletteSelection(pop)
+            parent2 = self.rouletteSelection(pop)
             child = self.orderCrossover(parent1, parent2)
             newPopulation.saveTour(i, child)
 
@@ -242,7 +242,7 @@ if __name__ == '__main__':
 
     n_cities = 1000
     population_size = 10
-    n_generations = 10
+    n_generations = 50
     cityCoordinate = []
     city_x = []
     city_y = []
@@ -318,7 +318,6 @@ if __name__ == '__main__':
     pop = Population(tourmanager, populationSize=number, initialise=False)
     for i in range(0, number):
         pop.saveTour(i, randomTourList[i])
-        print(pop.getTour(i).getCity(0))
 
     print("Initial distance: " + str(pop.getFittest().getDistance()))
 
@@ -345,4 +344,12 @@ if __name__ == '__main__':
     print(pop.getFittest())
     for i in range(0, n_cities):
         print(pop.getFittest().getCity(i).getIndex(), end=' -> ')
+
+    with open('solution_ga_random_roulette.csv', mode='w', newline='') as sam:
+        writer = csv.writer(sam)
+        index_array = []
+        for row in range(n_cities):
+            index_array.append([pop.getFittest().getCity(row).getIndex()])
+            writer.writerow(index_array[row])
+
     plt.show()
