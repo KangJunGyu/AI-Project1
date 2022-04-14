@@ -1,3 +1,6 @@
+# 유전 알고리즘으로 TSP 문제 풀기
+# elitSelection, orderCrossover, inversionMutate
+
 import random
 import csv
 import matplotlib.pyplot as plt
@@ -25,8 +28,8 @@ class GA:
             elitismOffset = 1
 
         for i in range(elitismOffset, newPopulation.populationSize()):
-            parent1 = self.tournamentSelection(pop)
-            parent2 = self.tournamentSelection(pop)
+            parent1 = self.elitSelection(pop)
+            parent2 = self.elitSelection(pop)
             child = self.orderCrossover(parent1, parent2)
             newPopulation.saveTour(i, child)
 
@@ -59,8 +62,6 @@ class GA:
                 if not child.containsCity(parent2.getCity(j)):
                     child.setCity(i, parent2.getCity(j))
                     break
-        #print(child)
-        #print(child.getCity(99))
         return child
 
     def frontOrderCrossover(self, parent1, parent2):
@@ -82,7 +83,6 @@ class GA:
                     if child.getCity(ii) == None:
                         child.setCity(ii, parent2.getCity(i))
                         break
-        #print(child)
         return child
 
     def PMXCrossover(self, parent1, parent2):
@@ -119,19 +119,6 @@ class GA:
                         if child.getCity(i) == child.getCity(j):
                             child.setCity(i, parent2.getCity(j))
                             break
-            """
-            for i in range(1, child.tourSize()):
-                if i >= startPos and i <= endPos:
-                    # if not child.containsCity(parent2.getCity(i)):
-                    if child.getCity(i) in child[startPos:endPos]:
-                        duplicate = True
-                        for j in range(1, child.tourSize()):
-                            if j < startPos or j > endPos:
-                                if child.getCity(j) == child.getCity(i):
-                                    child.setCity(j, parent2.getCity(i))
-            """
-
-        #print(child.tourSize())
         return child
 
     def cycleCrossover(self, parent1, parent2):
@@ -155,10 +142,8 @@ class GA:
         for tourPos1 in range(1, tour.tourSize()):
             if random.random() < self.mutationRate:
                 tourPos2 = int(tour.tourSize() * random.uniform(0.05, 1))
-
                 city1 = tour.getCity(tourPos1)
                 city2 = tour.getCity(tourPos2)
-
                 tour.setCity(tourPos2, city1)
                 tour.setCity(tourPos1, city2)
 
@@ -200,14 +185,6 @@ class GA:
                         tournament[j] = tournament[2*j+1]
         return pop.getTour(tournament[0])
 
-        # 좀 이상한 토너먼트(좋음)
-        # tournament = Population(self.tourmanager, self.tournamentSize, False)
-        # for i in range(0, self.tournamentSize):
-        #     randomId = int(random.random() * pop.populationSize())
-        #     tournament.saveTour(i, pop.getTour(randomId))
-        # fittest = tournament.getFittest()
-        # return fittest
-
     def rankingSelecton(self, pop):
         highest_chrom_idx = self.getSortedFitnessIndex(pop)
         prob_list = [0.5, 0.2, 0.15, 0.1, 0.05]
@@ -223,7 +200,6 @@ class GA:
     def getSortedFitnessIndex(self, pop):
         fitness_list = pop.getFitnessList()
         sortedFitness = sorted(fitness_list)
-        highest_list = []
         highest_tour_index = []
         for i in range(0, 5):
             highest_fitness = sortedFitness.pop()
@@ -251,15 +227,12 @@ class GA:
         for i in fitnessProb:
             fitnessSum += i
             fitness_sumList.append(fitnessSum)
-        #print(fitness_sumList)
 
         rand = random.random()
-        #print(rand)
         for i in range(pop.populationSize()):
             if rand <= fitness_sumList[i]:
                 #print(pop.getTour(i))
                 return pop.getTour(i)
-
         return None
 
 # 파일 직접 실행시 실행
@@ -269,13 +242,12 @@ if __name__ == '__main__':
 
     n_cities = 1000
     population_size = 10
-    n_generations = 1
+    n_generations = 10
     cityCoordinate = []
     city_x = []
     city_y = []
     city_index = []
 
-    #random.seed(100)
     i = 1
     for line in reader:
         line0 = float(line[0])
@@ -299,7 +271,7 @@ if __name__ == '__main__':
         reader = csv.reader(tsp)
         i = 0
         for row in reader:
-            cities.append(City(row[0], row[1], i))
+            cities.append(City(float(row[0]), float(row[1]), i))
             i = i + 1
 
     number = int(input("생성할 부모 gene 수를 입력하시오 :  "))
@@ -311,37 +283,20 @@ if __name__ == '__main__':
     for i in range(number):
         k = parentGene[i].total_length
         last = parentGene[i].cities_order[len(parentGene[i].cities_order) - 1].index
-        print(parentGene[i].cities_order)
-        #print(last)
-    print("----")
 
     with open('sample.csv', mode='w', newline='') as sam:
         writer = csv.writer(sam)
         index_array = []
         for row in range(len(parentGene[0].cities_order)):
             index_array.append([parentGene[0].cities_order[row].index])
-            #print(index_array[row], end=' ')
             writer.writerow(index_array[row])
 
     # 도시 수 만큼 랜덤 좌표 설정
     tourmanager = TourManager()
     for i in range(n_cities):
-        #x = random.randint(200, 800)
-        #y = random.randint(200, 800)
-
-        # 도시를 여행 매니저 리스트에 추가
-        #tourmanager.addCity(City(x=x, y=y))
         tourmanager.addCity(City(x=city_x[i], y=city_y[i], index=city_index[i]))
-        # 각 도시 위치에 점으로 표시
-        #cv2.circle(map_original, center=(x, y), radius=10, color=(0, 0, 255), thickness=-1, lineType=cv2.LINE_AA)
-        #plt.scatter(x, y)
-        plt.scatter(city_x[i], city_y[i])
+        plt.scatter(city_x[i], city_y[i], c='grey')
         plt.axis([0, 100, 0, 100])
-
-
-    # map을 이름으로 사진 보여주기
-    #cv2.imshow('map', map_original)
-    #cv2.waitKey(0)
 
     tourList = []
     for i in range(0, number):
@@ -358,7 +313,6 @@ if __name__ == '__main__':
     for i in range(0, number):
         randomTourList.append(Tour(randomTour[i]))
         randomTourList[i].generate()
-    #print(randomTourList[0])
 
     # Initialize population
     pop = Population(tourmanager, populationSize=number, initialise=False)
@@ -380,33 +334,9 @@ if __name__ == '__main__':
 
         if i == n_generations - 1:
             for j in range(1, n_cities):
-                plt.plot([fittest[j].x, fittest[j - 1].x], [fittest[j].y, fittest[j - 1].y], color="blue")
+                plt.plot([fittest[j].x, fittest[j - 1].x], [fittest[j].y, fittest[j - 1].y], color="blue", linewidth=0.5)
         print(pop.getFittest())
         print("Final distance: " + str(pop.getFittest().getDistance()))
-        # 지도에 반영
-        #map_result = map_original.copy()
-
-        """
-        # 라인 그리기, 적합도가 가장 높은 투어에서 도시 순서대로 라인 그리기
-        for j in range(1, n_cities):
-            cv2.line(
-                map_result,
-                pt1=(fittest[j - 1].x, fittest[j - 1].y),
-                pt2=(fittest[j].x, fittest[j].y),
-                color=(255, 0, 0),
-                thickness=3,
-                lineType=cv2.LINE_AA
-            )
-
-        cv2.putText(map_result, org=(10, 25), text='Generation: %d' % (i + 1), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                    fontScale=0.7, color=0, thickness=1, lineType=cv2.LINE_AA)
-        cv2.putText(map_result, org=(10, 50), text='Distance: %.2fkm' % fittest.getDistance(),
-                    fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.7, color=0, thickness=1, lineType=cv2.LINE_AA)
-        cv2.imshow('map', map_result)
-        if cv2.waitKey(100) == ord('q'):
-            break
-        """
-
 
     # Print final results
     print("Finished")
@@ -416,5 +346,3 @@ if __name__ == '__main__':
     for i in range(0, n_cities):
         print(pop.getFittest().getCity(i).getIndex(), end=' -> ')
     plt.show()
-
-    #cv2.waitKey(0)

@@ -1,3 +1,5 @@
+# 유전알고리즘 + 트리로 TSP 문제 풀기
+
 import random
 import csv
 import matplotlib.pyplot as plt
@@ -6,7 +8,6 @@ from City import TourManager
 from City import Tour
 from City import Population
 from dfs import tour
-from dfs import cluster
 
 # 유전 알고리즘 클래스
 class GA:
@@ -28,7 +29,7 @@ class GA:
         for i in range(elitismOffset, newPopulation.populationSize()):
             parent1 = self.rouletteSelection(pop)
             parent2 = self.rouletteSelection(pop)
-            child = self.orderCrossover(parent1, parent2)
+            child = self.cycleCrossover(parent1, parent2)
             newPopulation.saveTour(i, child)
 
         for i in range(elitismOffset, newPopulation.populationSize()):
@@ -60,8 +61,6 @@ class GA:
                 if not child.containsCity(parent2.getCity(j)):
                     child.setCity(i, parent2.getCity(j))
                     break
-        #print(child)
-        #print(child.getCity(99))
         return child
 
     def frontOrderCrossover(self, parent1, parent2):
@@ -83,7 +82,6 @@ class GA:
                     if child.getCity(ii) == None:
                         child.setCity(ii, parent2.getCity(i))
                         break
-        #print(child)
         return child
 
     def PMXCrossover(self, parent1, parent2):
@@ -111,8 +109,6 @@ class GA:
                         if child.getCity(i) == child.getCity(j):
                             child.setCity(i, parent2.getCity(j))
                             break
-
-            #target = child[:endPos+1]
             for i in range(endPos+1, parent2.tourSize()):
                 if child[i] in target:
                     duplicate = True
@@ -120,19 +116,6 @@ class GA:
                         if child.getCity(i) == child.getCity(j):
                             child.setCity(i, parent2.getCity(j))
                             break
-            """
-            for i in range(1, child.tourSize()):
-                if i >= startPos and i <= endPos:
-                    # if not child.containsCity(parent2.getCity(i)):
-                    if child.getCity(i) in child[startPos:endPos]:
-                        duplicate = True
-                        for j in range(1, child.tourSize()):
-                            if j < startPos or j > endPos:
-                                if child.getCity(j) == child.getCity(i):
-                                    child.setCity(j, parent2.getCity(i))
-            """
-
-        #print(child.tourSize())
         return child
 
     def cycleCrossover(self, parent1, parent2):
@@ -224,7 +207,6 @@ class GA:
     def getSortedFitnessIndex(self, pop):
         fitness_list = pop.getFitnessList()
         sortedFitness = sorted(fitness_list)
-        highest_list = []
         highest_tour_index = []
         for i in range(0, 5):
             highest_fitness = sortedFitness.pop()
@@ -252,15 +234,11 @@ class GA:
         for i in fitnessProb:
             fitnessSum += i
             fitness_sumList.append(fitnessSum)
-        #print(fitness_sumList)
 
         rand = random.random()
-        #print(rand)
         for i in range(pop.populationSize()):
             if rand <= fitness_sumList[i]:
-                #print(pop.getTour(i))
                 return pop.getTour(i)
-
         return None
 
 # 파일 직접 실행시 실행
@@ -270,13 +248,12 @@ if __name__ == '__main__':
 
     n_cities = 1000
     population_size = 10
-    n_generations = 1
+    n_generations = 10
     cityCoordinate = []
     city_x = []
     city_y = []
     city_index = []
 
-    #random.seed(100)
     i = 1
     for line in reader:
         line0 = float(line[0])
@@ -315,28 +292,16 @@ if __name__ == '__main__':
     # 도시 수 만큼 랜덤 좌표 설정
     tourmanager = TourManager()
     for i in range(n_cities):
-        #x = random.randint(200, 800)
-        #y = random.randint(200, 800)
-
-        # 도시를 여행 매니저 리스트에 추가
-        #tourmanager.addCity(City(x=x, y=y))
         tourmanager.addCity(City(x=city_x[i], y=city_y[i], index=city_index[i]))
-        # 각 도시 위치에 점으로 표시
-        #cv2.circle(map_original, center=(x, y), radius=10, color=(0, 0, 255), thickness=-1, lineType=cv2.LINE_AA)
-        #plt.scatter(x, y)
-        plt.scatter(city_x[i], city_y[i])
+        plt.scatter(city_x[i], city_y[i], c='lightblue')
         plt.axis([0, 100, 0, 100])
-
-
-    # map을 이름으로 사진 보여주기
-    #cv2.imshow('map', map_original)
-    #cv2.waitKey(0)
 
     tourList = []
     for i in range(0, number):
         tourList.append(parentGene[i].getArray())
     print(parentGene[0].getArray())
     print(parentGene[1].getArray())
+
     randomTour = []
     for i in range(0, number):
         randomTour.append(TourManager())
@@ -348,7 +313,6 @@ if __name__ == '__main__':
     for i in range(0, number):
         randomTourList.append(Tour(randomTour[i]))
         randomTourList[i].generate()
-    #print(randomTourList[0])
 
     # Initialize population
     pop = Population(tourmanager, populationSize=number, initialise=False)
@@ -370,33 +334,9 @@ if __name__ == '__main__':
 
         if i == n_generations - 1:
             for j in range(1, n_cities):
-                plt.plot([fittest[j].x, fittest[j - 1].x], [fittest[j].y, fittest[j - 1].y], color="blue")
+                plt.plot([fittest[j].x, fittest[j - 1].x], [fittest[j].y, fittest[j - 1].y], color="blue", linewidth=0.5)
         print(pop.getFittest())
         print("Final distance: " + str(pop.getFittest().getDistance()))
-        # 지도에 반영
-        #map_result = map_original.copy()
-
-        """
-        # 라인 그리기, 적합도가 가장 높은 투어에서 도시 순서대로 라인 그리기
-        for j in range(1, n_cities):
-            cv2.line(
-                map_result,
-                pt1=(fittest[j - 1].x, fittest[j - 1].y),
-                pt2=(fittest[j].x, fittest[j].y),
-                color=(255, 0, 0),
-                thickness=3,
-                lineType=cv2.LINE_AA
-            )
-
-        cv2.putText(map_result, org=(10, 25), text='Generation: %d' % (i + 1), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                    fontScale=0.7, color=0, thickness=1, lineType=cv2.LINE_AA)
-        cv2.putText(map_result, org=(10, 50), text='Distance: %.2fkm' % fittest.getDistance(),
-                    fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.7, color=0, thickness=1, lineType=cv2.LINE_AA)
-        cv2.imshow('map', map_result)
-        if cv2.waitKey(100) == ord('q'):
-            break
-        """
-
 
     # Print final results
     print("Finished")
@@ -406,5 +346,3 @@ if __name__ == '__main__':
     for i in range(0, n_cities):
         print(pop.getFittest().getCity(i).getIndex(), end=' -> ')
     plt.show()
-
-    #cv2.waitKey(0)

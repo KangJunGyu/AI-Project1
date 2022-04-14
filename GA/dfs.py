@@ -16,6 +16,12 @@ class tour:
     def getArray(self):
         return self.cities_order
 
+    def getArray2(self, start, end):
+        tmp = []
+        for i in range(0, (end-start+1)):
+            tmp.append(self.cities_order[(start+i)])
+        return tmp
+
     def createClusters(self, cities, cluster_number):
         cluster_size = len(cities) // cluster_number
         # cluster 분할을 위한 copy_cities를 생성

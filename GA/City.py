@@ -35,7 +35,8 @@ class City:
 # 여행 매니저
 class TourManager:
     # 도착 도시 리스트
-    destinationCities = []
+    def __init__(self):
+        self.destinationCities = []
 
     # 도착할 도시(클래스) 추가
     def addCity(self, city):
@@ -120,6 +121,11 @@ class Tour:
         self.tour[tourPosition] = city
         self.fitness = 0.0
         self.distance = 0
+
+    def setCityList(self, start, end, cluster_tour):
+        for i in range(0, (end-start+1)):
+            print(cluster_tour.getCity(i))
+            self.tour[start+i] = cluster_tour.getCity(i)
 
     # fitness(적합도) 계산 후 리턴
     def getFitness(self):

@@ -1,8 +1,9 @@
-import numpy as np
+# 1. Random으로 TSP문제 풀기
+
 import csv
-import random
 from City import City
 from Random import tour
+import matplotlib.pyplot as plt
 
 cities = []
 new_cities = []
@@ -15,13 +16,10 @@ with open('../TSP.csv', mode='r', newline='') as tsp:
     reader = csv.reader(tsp)
     i = 0
     for row in reader:
-        cities.append(City(row[0], row[1], i))
+        cities.append(City(float(row[0]), float(row[1]), i))
         i = i + 1
-        '''
-        ***객체배열이 잘 만들어졌는지 확인하는 코드***
-        print(cities[i].x , cities[i].y)
-        i = i +1
-        '''
+        plt.scatter(float(row[0]), float(row[1]), c='grey')
+        plt.axis([0, 100, 0, 100])
 
 number = int(input("생성할 부모 gene 수를 입력하시오 :  "))
 for i in range(number):
@@ -35,11 +33,16 @@ for i in range(number):
     print(len(parentGene[0].cities_order))
     print(last)
 
-with open('sample.csv', mode='w', newline='') as sam:
+with open('solution_random.csv', mode='w', newline='') as sam:
     writer = csv.writer(sam)
     index_array = []
     for row in range(len(parentGene[0].cities_order)):
         index_array.append([parentGene[0].cities_order[row].index])
         print(index_array[row])
-        print(parentGene[0].total_length)
         writer.writerow(index_array[row])
+
+print(parentGene[0].total_length)
+for j in range(1, len(parentGene[0].cities_order)):
+    plt.plot([parentGene[0].cities_order[j].x, parentGene[0].cities_order[j - 1].x], [parentGene[0].cities_order[j].y, parentGene[0].cities_order[j - 1].y], color="blue", linewidth=0.5)
+
+plt.show()
