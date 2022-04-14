@@ -1,7 +1,5 @@
 import random
 
-
-
 # 최종 도시들의 정렬이 담긴 클래스
 class tour:
     def __init__(self, cities_array, cluster_number):
